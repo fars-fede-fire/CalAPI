@@ -11,3 +11,4 @@ python-jose
 dotenv
 pyjwt
 itsdangerous
+httpx
