@@ -20,7 +20,7 @@ RUN mkdir -p /data/calendars
 ENV DATABASE_URL=sqlite:////data/shift_calendar.db
 
 # Sørg for at static/calendars peger på /data/calendars
-RUN ln -sfn /data/calendars /app/static/calendars
+RUN mkdir -p /app/static && ln -sfn /data/calendars /app/static/calendars
 
 EXPOSE 8000
 
