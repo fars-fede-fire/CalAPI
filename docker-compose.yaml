@@ -1,0 +1,20 @@
+services:
+  vagtkalender:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # SQLite database og ICS-filer overlever container-genstarter
+      - ${DATA_DIR}/calendar/data:/data
+    environment:
+      DATABASE_URL: sqlite:////data/shift_calendar.db
+      HTTPS_ONLY: "true"
+
+      # ── OIDC ──────────────────────────────────────────────────────────────────
+      OIDC_ISSUER: ${OIDC_ISSUER}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET}
+
+      # ── Session cookie ────────────────────────────────────────────────────────
+      SECRET_KEY: ${SECRET_KEY}
