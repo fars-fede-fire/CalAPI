@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vagtkalender · Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #0d0f14;
+  --bg2:     #151820;
+  --bg3:     #1d2130;
+  --border:  #2a2f42;
+  --border2: #363d54;
+  --amber:   #f5a623;
+  --amber2:  #ffcc66;
+  --green:   #3dd68c;
+  --red:     #ff5f5f;
+  --text:    #e8ecf5;
+  --muted:   #7a8099;
+  --fh:      'Syne', sans-serif;
+  --fm:      'IBM Plex Mono', monospace;
+}
+
+body { background: var(--bg); color: var(--text); font-family: var(--fm); min-height: 100vh; font-size: 14px; line-height: 1.6; }
+
+/* ── Shell ── */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { width: 250px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+.sb-brand { padding: 24px 20px 18px; border-bottom: 1px solid var(--border); }
+.sb-brand h1 { font-family: var(--fh); font-size: 1.05rem; font-weight: 800; color: var(--amber); letter-spacing: -.02em; }
+.sb-brand p { font-size: .65rem; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .08em; }
+.sb-nav { padding: 14px 10px; flex: 1; }
+.sb-section { margin-bottom: 22px; }
+.sb-label { font-size: .6rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); padding: 0 10px; margin-bottom: 4px; }
+.nav-btn {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; padding: 8px 10px; border: none; background: none;
+  color: var(--muted); font-family: var(--fm); font-size: .76rem;
+  border-radius: 6px; cursor: pointer; text-align: left; transition: all .15s;
+}
+.nav-btn:hover { background: var(--bg3); color: var(--text); }
+.nav-btn.active { background: var(--bg3); color: var(--amber); }
+.nav-btn .ico { width: 18px; text-align: center; font-size: .95rem; }
+.badge { margin-left: auto; font-size: .6rem; padding: 1px 6px; border-radius: 10px; font-weight: 600; background: var(--red); color: #fff; }
+.badge.ok { background: var(--green); color: var(--bg); }
+.badge.warn { background: var(--amber); color: var(--bg); }
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: auto; }
+.topbar { height: 54px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 28px; gap: 10px; flex-shrink: 0; }
+.topbar-title { font-family: var(--fh); font-weight: 700; font-size: .92rem; }
+.topbar-sub { font-size: .7rem; color: var(--muted); }
+.content { padding: 28px 32px; max-width: 860px; }
+
+/* ── Pages ── */
+.page { display: none; }
+.page.visible { display: block; }
+
+/* ── Steps ── */
+.steps { display: flex; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 24px; }
+.step-item { flex: 1; padding: 11px 14px; display: flex; align-items: center; gap: 9px; border-right: 1px solid var(--border); font-size: .73rem; color: var(--muted); }
+.step-item:last-child { border-right: none; }
+.step-item.active { background: rgba(245,166,35,.07); color: var(--amber); }
+.step-item.done { color: var(--green); }
+.step-num { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: .62rem; font-weight: 700; flex-shrink: 0; }
+.step-item.done .step-num { background: var(--green); border-color: var(--green); color: var(--bg); }
+
+/* ── Cards ── */
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 22px; margin-bottom: 18px; }
+.card-title { font-family: var(--fh); font-size: .95rem; font-weight: 700; margin-bottom: 3px; }
+.card-sub { font-size: .72rem; color: var(--muted); margin-bottom: 16px; }
+
+/* ── Drop zone ── */
+.drop-zone { border: 2px dashed var(--border2); border-radius: 8px; padding: 44px 24px; text-align: center; cursor: pointer; transition: all .2s; position: relative; }
+.drop-zone:hover, .drop-zone.over { border-color: var(--amber); background: rgba(245,166,35,.04); }
+.drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.drop-icon { font-size: 2.4rem; margin-bottom: 10px; }
+.drop-label { font-family: var(--fh); font-size: .95rem; font-weight: 600; }
+.drop-hint { font-size: .7rem; color: var(--muted); margin-top: 5px; }
+
+/* ── Hard stop ── */
+.hard-stop { background: rgba(255,95,95,.08); border: 1px solid rgba(255,95,95,.35); border-left: 3px solid var(--red); border-radius: 8px; padding: 13px 16px; margin-bottom: 18px; display: flex; gap: 11px; }
+.hs-icon { font-size: 1rem; flex-shrink: 0; margin-top: 2px; }
+.hs-title { font-family: var(--fh); font-weight: 700; font-size: .82rem; color: var(--red); }
+.hs-desc { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+
+.success-banner { background: rgba(61,214,140,.07); border: 1px solid rgba(61,214,140,.3); border-left: 3px solid var(--green); border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; }
+.sb-title { font-family: var(--fh); font-weight: 700; color: var(--green); font-size: .88rem; }
+.sb-desc { font-size: .72rem; color: var(--muted); margin-top: 3px; }
+
+/* ── Tag grid ── */
+.tag-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.col-tag { display: flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 6px; font-size: .73rem; border: 1.5px solid var(--border2); background: var(--bg3); cursor: default; user-select: none; transition: all .15s; }
+.col-tag.known { border-color: var(--green); color: var(--green); }
+.col-tag.yes { border-color: var(--amber); background: rgba(245,166,35,.1); color: var(--amber2); cursor: pointer; }
+.col-tag.no { border-color: var(--border); background: transparent; color: var(--muted); text-decoration: line-through; cursor: pointer; opacity: .6; }
+.col-tag.unset { border-color: var(--red); color: var(--red); cursor: pointer; }
+.col-tag .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.tag-hint { font-size: .7rem; color: var(--muted); margin-top: 10px; }
+
+/* ── Table ── */
+.map-table { width: 100%; border-collapse: collapse; }
+.map-table th { text-align: left; padding: 7px 11px; font-size: .63rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); border-bottom: 1px solid var(--border); }
+.map-table td { padding: 7px 11px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.map-table tr:last-child td { border-bottom: none; }
+.map-table tr.is-mapped td { opacity: .5; }
+.raw-chip { display: inline-block; background: var(--bg3); border: 1px solid var(--border2); border-radius: 4px; padding: 1px 7px; font-size: .73rem; }
+.status-ok { color: var(--green); font-size: .7rem; }
+.status-pending { color: var(--red); font-size: .7rem; }
+.status-ignored { color: var(--muted); font-size: .7rem; }
+
+/* ── Form elements ── */
+select, input[type=text], input[type=time] {
+  background: var(--bg3); border: 1px solid var(--border2); border-radius: 6px;
+  color: var(--text); font-family: var(--fm); font-size: .76rem;
+  padding: 7px 10px; outline: none; transition: border-color .15s; width: 100%;
+}
+select:focus, input:focus { border-color: var(--amber); }
+select option, optgroup { background: var(--bg2); }
+
+/* ── Buttons ── */
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 6px; font-family: var(--fm); font-size: .76rem; font-weight: 500; cursor: pointer; transition: all .15s; border: none; }
+.btn-primary { background: var(--amber); color: #0d0f14; }
+.btn-primary:hover { background: var(--amber2); }
+.btn-primary:disabled { background: var(--border2); color: var(--muted); cursor: not-allowed; pointer-events: none; }
+.btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border2); }
+.btn-ghost:hover { border-color: var(--text); }
+.btn-sm { padding: 5px 11px; font-size: .7rem; }
+
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.row-between { display: flex; justify-content: space-between; align-items: center; }
+.mt2 { margin-top: 8px; }
+.mt3 { margin-top: 14px; }
+.mt4 { margin-top: 20px; }
+.mb2 { margin-bottom: 8px; }
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+.muted { color: var(--muted); font-size: .73rem; }
+.c-green { color: var(--green); }
+.c-red { color: var(--red); }
+.c-amber { color: var(--amber); }
+
+/* ── Inline form ── */
+.irow { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: .65rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.field-grow { flex: 1; min-width: 120px; }
+
+/* ── List items ── */
+.list-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 13px; background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; margin-bottom: 5px; font-size: .78rem; gap: 8px; transition: border-color .15s; }
+.list-item.drag-over { border-color: var(--amber); background: rgba(245,166,35,.06); }
+.li-name { flex: 1; font-weight: 500; }
+.li-meta { font-size: .68rem; color: var(--muted); }
+.pill { padding: 2px 8px; border-radius: 10px; font-size: .63rem; font-weight: 600; background: var(--bg); border: 1px solid var(--border2); color: var(--muted); white-space: nowrap; }
+.pill-amber { border-color: var(--amber); color: var(--amber); }
+.pill-green { border-color: var(--green); color: var(--green); }
+.pill-red { border-color: var(--red); color: var(--red); }
+
+/* ── ICS box ── */
+.ics-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: .7rem; word-break: break-all; display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+.ics-url { color: var(--amber); flex: 1; }
+
+
+/* ── Subscription sub-card ── */
+.sub-card { background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
+.sub-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
+.sub-label { font-family: var(--fh); font-weight: 700; font-size: .85rem; flex: 1; }
+.sub-meta { font-size: .7rem; color: var(--muted); margin-top: 6px; }
+.btn-del { background: transparent; border: 1px solid rgba(255,95,95,.35); color: var(--red); border-radius: 5px; padding: 4px 10px; font-size: .68rem; font-family: var(--fm); cursor: pointer; transition: all .15s; }
+.btn-del:hover { background: rgba(255,95,95,.1); }
+/* ── New subscription form (collapsible) ── */
+.new-sub-form { background: var(--bg3); border: 1px dashed var(--border2); border-radius: 8px; padding: 16px; margin-top: 4px; }
+.new-sub-form-title { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px; }
+/* ── Topbar user info ── */
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.topbar-user { font-size: .7rem; color: var(--muted); }
+.btn-logout { background: transparent; border: 1px solid var(--border2); color: var(--muted);
+  border-radius: 5px; padding: 4px 10px; font-size: .68rem; font-family: var(--fm);
+  cursor: pointer; transition: all .15s; }
+.btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+/* ── Empty ── */
+.empty { text-align: center; padding: 30px 20px; color: var(--muted); font-size: .76rem; }
+.empty-ico { font-size: 1.8rem; margin-bottom: 8px; }
+
+/* ── Toast ── */
+#toast-wrap { position: fixed; bottom: 22px; right: 22px; display: flex; flex-direction: column; gap: 7px; z-index: 9999; pointer-events: none; }
+.toast { padding: 11px 16px; border-radius: 8px; font-size: .76rem; font-family: var(--fm); max-width: 320px; animation: slide-in .22s ease; pointer-events: auto; }
+.toast-success { background: rgba(61,214,140,.13); border: 1px solid var(--green); color: var(--green); }
+.toast-error   { background: rgba(255,95,95,.13); border: 1px solid var(--red); color: var(--red); }
+.toast-info    { background: rgba(245,166,35,.1); border: 1px solid var(--amber); color: var(--amber2); }
+@keyframes slide-in { from { transform: translateX(36px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── Spinner ── */
+.spin { width: 15px; height: 15px; border: 2px solid var(--border2); border-top-color: var(--amber); border-radius: 50%; animation: spinning .6s linear infinite; flex-shrink: 0; }
+@keyframes spinning { to { transform: rotate(360deg); } }
+.spin-center { display: flex; justify-content: center; padding: 20px 0; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar">
+    <div class="sb-brand">
+      <h1>Vagtkalender</h1>
+      <p>Admin panel</p>
+    </div>
+    <div class="sb-nav">
+      <div class="sb-section">
+        <div class="sb-label">Workflow</div>
+        <button class="nav-btn active" data-page="upload">
+          <span class="ico">📋</span> Upload fil
+          <span class="badge warn" id="nav-badge-upload" style="display:none"></span>
+        </button>
+        <button class="nav-btn" data-page="rawshifts">
+          <span class="ico">🗂</span> Råværdi mapping
+          <span class="badge" id="nav-badge-raw">…</span>
+        </button>
+      </div>
+      <div class="sb-section">
+        <div class="sb-label">Konfiguration</div>
+        <button class="nav-btn" data-page="configio">
+          <span class="ico">💾</span> Import / Eksport
+        </button>
+      </div>
+      <div class="sb-section">
+        <div class="sb-label">Abonnementer</div>
+        <button class="nav-btn" data-page="employees">
+          <span class="ico">👥</span> Medarbejdere
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Main ── -->
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title" id="topbar-title">Upload vagtplan</span>
+      <span class="topbar-sub" id="topbar-sub"></span>
+      <div class="topbar-right" id="topbar-right" style="display:none">
+        <span class="topbar-user" id="topbar-user"></span>
+        <button class="btn-logout" id="logout-btn">Log ud</button>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- ══════════════════════════════════════════
+           PAGE: upload wizard
+      ══════════════════════════════════════════ -->
+      <div class="page visible" id="page-upload">
+        <!-- Step indicator -->
+        <div class="steps" id="step-indicator">
+          <div class="step-item active" id="si-1"><div class="step-num">1</div><span>Upload fil</span></div>
+          <div class="step-item" id="si-2"><div class="step-num">2</div><span>Bekræft medarbejdere</span></div>
+          <div class="step-item" id="si-3"><div class="step-num">3</div><span>Map råværdier</span></div>
+          <div class="step-item" id="si-4"><div class="step-num">4</div><span>Afsluttet</span></div>
+        </div>
+
+        <!-- Step 1 -->
+        <div id="wiz-1">
+          <div class="card">
+            <div class="card-title">Upload vagtplan</div>
+            <div class="card-sub">Excel-fil (.xlsx) med datoer som rækker og medarbejdere som kolonner</div>
+            <div class="drop-zone" id="drop-zone">
+              <input type="file" id="file-input" accept=".xlsx,.xls">
+              <div id="drop-inner">
+                <div class="drop-icon">📋</div>
+                <div class="drop-label">Træk fil hertil eller klik for at vælge</div>
+                <div class="drop-hint">.xlsx / .xls</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div id="wiz-2" style="display:none">
+          <div id="wiz2-hardstop" class="hard-stop" style="display:none">
+            <div class="hs-icon">⛔</div>
+            <div>
+              <div class="hs-title" id="wiz2-hs-title">Hard stop</div>
+              <div class="hs-desc">Klik på hver kolonne: <strong style="color:var(--amber2)">✓ medarbejder</strong> eller <strong style="color:var(--muted); text-decoration:line-through">× ikke medarbejder</strong>. Du kan ikke fortsætte før alle er afklaret.</div>
+            </div>
+          </div>
+
+          <div class="card" id="wiz2-known-card" style="display:none">
+            <div class="card-title">Kendte medarbejdere</div>
+            <div class="card-sub">Allerede i databasen — inkluderes automatisk.</div>
+            <div class="tag-grid" id="wiz2-known-tags"></div>
+          </div>
+
+          <div class="card" id="wiz2-new-card" style="display:none">
+            <div class="card-title">Nye kolonner — klassificer venligst</div>
+            <div class="card-sub">Klik én gang = medarbejder · igen = ikke medarbejder · igen = nulstil</div>
+            <div class="tag-grid" id="wiz2-new-tags"></div>
+            <div class="tag-hint" id="wiz2-tally"></div>
+          </div>
+
+          <div class="card" id="wiz2-all-known-card" style="display:none">
+            <div style="text-align:center; padding:12px 0">
+              <div style="font-size:2rem; margin-bottom:8px">✅</div>
+              <div style="font-family:var(--fh); font-weight:700; color:var(--green)">Alle kolonner kendes allerede</div>
+              <div class="muted" style="margin-top:4px">Fortsæt direkte.</div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" id="wiz2-confirm-btn" disabled>→ Bekræft og gem vagter</button>
+        </div>
+
+        <!-- Step 3 -->
+        <div id="wiz-3" style="display:none">
+          <div id="wiz3-hardstop" class="hard-stop" style="display:none">
+            <div class="hs-icon">⛔</div>
+            <div>
+              <div class="hs-title" id="wiz3-hs-title">Hard stop</div>
+              <div class="hs-desc">Alle råværdier skal tildeles en vagttype eller markeres som irrelevant, før ICS-filer genereres korrekt.</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Kategorier</div>
+            <div class="card-sub">F.eks. "Dagvagt", "Nattevagt", "Fri", "Kursus"</div>
+            <div id="cat-list"></div>
+            <div class="irow mt3">
+              <div class="field field-grow">
+                <label>Ny kategori</label>
+                <input type="text" id="new-cat-input" placeholder="Kategori navn…">
+              </div>
+              <button class="btn btn-ghost" id="add-cat-btn" style="margin-top:14px">+ Tilføj</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Vagttyper</div>
+            <div class="card-sub">Navngivne vagter med valgfri start/sluttid</div>
+            <div id="type-list"></div>
+            <div class="divider"></div>
+            <div class="muted mb2" style="text-transform:uppercase; letter-spacing:.08em; font-size:.65rem">Opret ny vagttype</div>
+            <div class="irow">
+              <div class="field field-grow">
+                <label>Navn</label>
+                <input type="text" id="new-type-name" placeholder="Dagvagt 07-15">
+              </div>
+              <div class="field">
+                <label>Start</label>
+                <input type="time" id="new-type-start" style="width:110px">
+              </div>
+              <div class="field">
+                <label>Slut</label>
+                <input type="time" id="new-type-end" style="width:110px">
+              </div>
+              <div class="field" style="width:150px">
+                <label>Kategori</label>
+                <select id="new-type-cat"><option value="">Vælg…</option></select>
+              </div>
+              <button class="btn btn-ghost" id="add-type-btn" style="margin-top:14px">+ Tilføj</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="row-between mb2">
+              <div>
+                <div class="card-title">Råværdi mapping</div>
+                <div class="card-sub">Map celleværdier fra Excel til vagttypes</div>
+              </div>
+              <span id="wiz3-map-status" style="font-size:.76rem; font-weight:600"></span>
+            </div>
+            <table class="map-table">
+              <thead><tr><th>Råværdi</th><th>Vagttype</th><th>Status</th></tr></thead>
+              <tbody id="wiz3-raw-tbody"></tbody>
+            </table>
+          </div>
+
+          <button class="btn btn-primary" id="wiz3-done-btn" disabled>→ Afslut upload</button>
+          <span id="wiz3-done-hint" class="muted" style="margin-left:12px; display:none">Map alle råværdier for at fortsætte</span>
+        </div>
+
+        <!-- Step 4 -->
+        <div id="wiz-4" style="display:none">
+          <div class="success-banner">
+            <div class="sb-title">✓ Upload fuldført</div>
+            <div class="sb-desc" id="wiz4-desc"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Næste skridt</div>
+            <div class="card-sub">Gå til <strong>Medarbejdere</strong> for at oprette kalenderabonnementer og dele ICS-links.</div>
+          </div>
+          <button class="btn btn-ghost" id="wiz4-reset-btn">↩ Upload endnu en fil</button>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════
+           PAGE: raw shifts overview
+      ══════════════════════════════════════════ -->
+      <div class="page" id="page-rawshifts">
+        <div id="rs-hardstop" class="hard-stop" style="display:none">
+          <div class="hs-icon">⚠️</div>
+          <div>
+            <div class="hs-title" id="rs-hs-title"></div>
+            <div class="hs-desc">ICS-filer udelader vagter med disse værdier, indtil de er mappet.</div>
+          </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="card">
+          <div class="card-title">Kategorier</div>
+          <div class="card-sub">F.eks. "Dagvagt", "Nattevagt", "Fri", "Kursus"</div>
+          <div id="rs-cat-list"><div class="spin-center"><div class="spin"></div></div></div>
+          <div class="irow mt3">
+            <div class="field field-grow">
+              <label>Ny kategori</label>
+              <input type="text" id="rs-new-cat-input" placeholder="Kategori navn…">
+            </div>
+            <button class="btn btn-ghost" id="rs-add-cat-btn" style="margin-top:14px">+ Tilføj</button>
+          </div>
+        </div>
+
+        <!-- Shift types -->
+        <div class="card">
+          <div class="card-title">Vagttyper</div>
+          <div class="card-sub">Navngivne vagter med valgfri start/sluttid</div>
+          <div id="rs-type-list"><div class="spin-center"><div class="spin"></div></div></div>
+          <div class="divider"></div>
+          <div class="muted mb2" style="text-transform:uppercase;letter-spacing:.08em;font-size:.65rem">Opret ny vagttype</div>
+          <div class="irow">
+            <div class="field field-grow">
+              <label>Navn</label>
+              <input type="text" id="rs-new-type-name" placeholder="Dagvagt 07-15">
+            </div>
+            <div class="field">
+              <label>Start</label>
+              <input type="time" id="rs-new-type-start" style="width:110px">
+            </div>
+            <div class="field">
+              <label>Slut</label>
+              <input type="time" id="rs-new-type-end" style="width:110px">
+            </div>
+            <div class="field" style="width:160px">
+              <label>Kategori</label>
+              <select id="rs-new-type-cat"><option value="">Vælg…</option></select>
+            </div>
+            <button class="btn btn-ghost" id="rs-add-type-btn" style="margin-top:14px">+ Tilføj</button>
+          </div>
+        </div>
+
+        <!-- Raw shift mapping -->
+        <div class="card">
+          <div class="row-between mb2">
+            <div>
+              <div class="card-title">Råværdi mapping</div>
+              <div class="card-sub">Celleværdier fundet på tværs af alle uploadede filer</div>
+            </div>
+            <span id="rs-map-status" style="font-size:.76rem;font-weight:600"></span>
+          </div>
+          <div id="rs-loading" class="spin-center"><div class="spin"></div></div>
+          <table class="map-table" id="rs-table" style="display:none">
+            <thead><tr><th>Råværdi</th><th>Vagttype</th><th>Status</th></tr></thead>
+            <tbody id="rs-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════
+           PAGE: employees
+      ══════════════════════════════════════════ -->
+      <div class="page" id="page-employees">
+        <div id="emp-loading" class="spin-center"><div class="spin"></div></div>
+        <div id="emp-list"></div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<div id="toast-wrap"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════════
+   Auth: server-side session (cookie sættes af /auth/callback).
+   Ingen tokens i browseren — al OIDC håndteres af backenden.
+   Brugerinfo injiceres direkte via Jinja2.
+════════════════════════════════════════════════════════════════════════════ */
+const CURRENT_USER = {{ user | tojson }};
+
+/* ── Utilities ──────────────────────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
+
+async function api(path, opts = {}) {
+  // Session-cookie sendes automatisk (same-origin) — ingen Bearer token nødvendig
+  const res = await fetch(path, opts);
+  if (res.status === 401) {
+    // Session udløbet — redirect til login
+    window.location.href = '/auth/login';
+    return;
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Ukendt fejl');
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+/* ── Toast ────────────────────────────────────────────────────────────────── */
+function toast(msg, type = 'info') {
+  const w = $('toast-wrap');
+  const t = el('div', `toast toast-${type}`, msg);
+  w.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+/* ── Spinner helpers ────────────────────────────────────────────────────────── */
+function spinBtn(btn, label = null) {
+  const s = el('span', 'spin');
+  btn.disabled = true;
+  btn.innerHTML = '';
+  btn.appendChild(s);
+  if (label) btn.append(' ' + label);
+}
+function restoreBtn(btn, html) {
+  btn.disabled = false;
+  btn.innerHTML = html;
+}
+
+/* ── Navigation ─────────────────────────────────────────────────────────────── */
+const PAGE_TITLES = { upload: 'Upload vagtplan', rawshifts: 'Råværdi mapping', employees: 'Medarbejdere', configio: 'Import / Eksport' };
+let currentPage = 'upload';
+
+function showPage(name) {
+  currentPage = name;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('visible'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  $(`page-${name}`).classList.add('visible');
+  document.querySelector(`.nav-btn[data-page="${name}"]`).classList.add('active');
+  $('topbar-title').textContent = PAGE_TITLES[name];
+  $('topbar-sub').textContent = '';
+  if (name === 'rawshifts') loadRawShiftsPage();
+  if (name === 'employees') loadEmployeesPage();
+  if (name === 'configio') initConfigIO();
+  refreshRawBadge();
+}
+
+/* ── Raw badge ───────────────────────────────────────────────────────────────── */
+async function refreshRawBadge() {
+  try {
+    const data = await api('/raw-shifts/unmapped');
+    const n = data.length;
+    const b = $('nav-badge-raw');
+    b.textContent = n > 0 ? n : '✓';
+    b.className = n > 0 ? 'badge' : 'badge ok';
+    b.style.display = '';
+  } catch {}
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   WIZARD
+════════════════════════════════════════════════════════════════════════════ */
+let wizardState = {
+  step: 1,
+  sessionToken: null,
+  parseData: null,     // { all_columns, known_employees, new_columns }
+  columnDecisions: {}, // name → null | true | false
+  confirmData: null,   // { employees_added, shift_entries_added, unmapped_raw_values }
+  // Step 3 data (loaded fresh each time)
+  categories: [],
+  shiftTypes: [],
+  rawShifts: [],
+  ignoredRaws: new Set(),
+};
+
+function setWizardStep(n) {
+  wizardState.step = n;
+  for (let i = 1; i <= 4; i++) {
+    $(`wiz-${i}`).style.display = i === n ? '' : 'none';
+    const si = $(`si-${i}`);
+    si.classList.remove('active', 'done');
+    if (i < n) { si.classList.add('done'); si.querySelector('.step-num').textContent = '✓'; }
+    else if (i === n) si.classList.add('active');
+    else si.querySelector('.step-num').textContent = i;
+  }
+  $('topbar-sub').textContent = n < 4 ? `— Trin ${n} af 4` : '';
+  // Upload nav badge
+  const b = $('nav-badge-upload');
+  if (n > 1 && n < 4) { b.textContent = `${n}/4`; b.style.display = ''; }
+  else b.style.display = 'none';
+}
+
+/* ── Step 1: Upload ──────────────────────────────────────────────────────────── */
+const dropZone = $('drop-zone');
+const fileInput = $('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('over'); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+
+async function handleFile(file) {
+  if (!file) return;
+  $('drop-inner').innerHTML = `<div class="spin" style="margin:0 auto 10px"></div><div class="drop-label">Parser fil…</div>`;
+  fileInput.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const data = await api('/upload/parse', { method: 'POST', body: fd });
+    wizardState.parseData = data;
+    wizardState.sessionToken = data.session_token;
+    wizardState.columnDecisions = {};
+    data.new_columns.forEach(c => wizardState.columnDecisions[c] = null);
+    toast('Fil parset — bekræft medarbejdere', 'success');
+    buildStep2();
+    setWizardStep(2);
+  } catch (e) {
+    toast(e.message, 'error');
+    $('drop-inner').innerHTML = `<div class="drop-icon">📋</div><div class="drop-label">Træk fil hertil eller klik for at vælge</div><div class="drop-hint">.xlsx / .xls</div>`;
+    fileInput.disabled = false;
+  }
+}
+
+/* ── Step 2: Confirm employees ──────────────────────────────────────────────── */
+function buildStep2() {
+  const { known_employees: known, new_columns: newCols } = wizardState.parseData;
+
+  // Known block
+  if (known.length > 0) {
+    $('wiz2-known-card').style.display = '';
+    const grid = $('wiz2-known-tags');
+    grid.innerHTML = '';
+    known.forEach(c => {
+      const t = el('div', 'col-tag known');
+      t.innerHTML = `<span class="dot"></span>${c}`;
+      grid.appendChild(t);
+    });
+  } else {
+    $('wiz2-known-card').style.display = 'none';
+  }
+
+  // New columns block
+  if (newCols.length > 0) {
+    $('wiz2-new-card').style.display = '';
+    $('wiz2-all-known-card').style.display = 'none';
+    renderNewTags();
+  } else {
+    $('wiz2-new-card').style.display = 'none';
+    $('wiz2-all-known-card').style.display = '';
+    $('wiz2-hardstop').style.display = 'none';
+    $('wiz2-confirm-btn').disabled = false;
+  }
+  updateStep2UI();
+}
+
+function renderNewTags() {
+  const newCols = wizardState.parseData.new_columns;
+  const grid = $('wiz2-new-tags');
+  grid.innerHTML = '';
+  newCols.forEach(c => {
+    const d = wizardState.columnDecisions[c];
+    const cls = d === null ? 'unset' : d ? 'yes' : 'no';
+    const icon = d === null ? '?' : d ? '✓' : '×';
+    const t = el('div', `col-tag ${cls}`);
+    t.innerHTML = `<span style="font-size:.8rem">${icon}</span>${c}`;
+    t.title = 'Klik for at skifte status';
+    t.addEventListener('click', () => {
+      const cur = wizardState.columnDecisions[c];
+      wizardState.columnDecisions[c] = cur === null ? true : cur === true ? false : null;
+      renderNewTags();
+      updateStep2UI();
+    });
+    grid.appendChild(t);
+  });
+}
+
+function updateStep2UI() {
+  const newCols = wizardState.parseData?.new_columns || [];
+  const dec = wizardState.columnDecisions;
+  const pending = newCols.filter(c => dec[c] === null).length;
+  const yesCount = newCols.filter(c => dec[c] === true).length;
+  const noCount  = newCols.filter(c => dec[c] === false).length;
+
+  if (pending > 0) {
+    $('wiz2-hardstop').style.display = '';
+    $('wiz2-hs-title').textContent = `Hard stop — ${pending} kolonne${pending > 1 ? 'r' : ''} afventer klassificering`;
+  } else {
+    $('wiz2-hardstop').style.display = 'none';
+  }
+
+  if (newCols.length > 0) {
+    $('wiz2-tally').textContent =
+      `${yesCount} medarbejder · ${noCount} ekskluderet · ${pending > 0 ? pending + ' uafklaret' : 'alle afklaret'}`;
+  }
+  $('wiz2-confirm-btn').disabled = pending > 0;
+}
+
+$('wiz2-confirm-btn').addEventListener('click', async () => {
+  const btn = $('wiz2-confirm-btn');
+  spinBtn(btn, 'Gemmer…');
+  try {
+    const confirmed = wizardState.parseData.new_columns.filter(c => wizardState.columnDecisions[c] === true);
+    const data = await api('/upload/confirm-employees', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_token: wizardState.sessionToken, confirmed_employees: confirmed }),
+    });
+    wizardState.confirmData = data;
+    toast(`${data.shift_entries_added} vagter gemt`, 'success');
+    await loadStep3Data();
+    setWizardStep(3);
+  } catch (e) {
+    toast(e.message, 'error');
+    restoreBtn(btn, '→ Bekræft og gem vagter');
+  }
+});
+
+/* ── Step 3: Map raw shifts ──────────────────────────────────────────────────── */
+async function loadStep3Data() {
+  const [raws, types, cats] = await Promise.all([
+    api('/raw-shifts'),
+    api('/shift-types'),
+    api('/shift-categories'),
+  ]);
+  wizardState.rawShifts = raws;
+  wizardState.shiftTypes = types;
+  wizardState.categories = cats;
+  renderStep3();
+}
+
+function renderStep3() {
+  renderCatList();
+  renderTypeList();
+  renderTypeCatSelect($('new-type-cat'));
+  renderRawTable($('wiz3-raw-tbody'), true);
+  updateStep3Status();
+}
+
+function renderCatList() {
+  const list = $('cat-list');
+  list.innerHTML = '';
+  if (wizardState.categories.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="empty-ico">📁</div>Ingen kategorier endnu</div>`;
+    return;
+  }
+  wizardState.categories.forEach(c => {
+    const item = el('div', 'list-item');
+    item.innerHTML = `<span class="li-name">${c.name}</span><span class="pill">ID ${c.id}</span>`;
+    list.appendChild(item);
+  });
+}
+
+function renderTypeList() {
+  const list = $('type-list');
+  list.innerHTML = '';
+  if (wizardState.shiftTypes.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="empty-ico">📅</div>Ingen vagttyper endnu</div>`;
+    return;
+  }
+  wizardState.shiftTypes.forEach(st => {
+    const cat = wizardState.categories.find(c => c.id === st.shift_category_id);
+    const item = el('div', 'list-item');
+    item.innerHTML = `
+      <span class="li-name">${st.name}</span>
+      ${st.start_time ? `<span class="li-meta">${st.start_time.substring(0,5)}–${st.end_time.substring(0,5)}</span>` : ''}
+      <span class="pill pill-amber">${cat?.name || '?'}</span>`;
+    list.appendChild(item);
+  });
+}
+
+function renderTypeCatSelect(sel) {
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Vælg…</option>';
+  wizardState.categories.forEach(c => {
+    const o = el('option');
+    o.value = c.id;
+    o.textContent = c.name;
+    sel.appendChild(o);
+  });
+  if (cur) sel.value = cur;
+}
+
+function buildTypeOptions(sel, selectedId) {
+  sel.innerHTML = '<option value="">— Vælg vagttype —</option><option value="__ignore__">⛔ Irrelevant / ignorer</option>';
+  wizardState.categories.forEach(cat => {
+    const types = wizardState.shiftTypes.filter(t => t.shift_category_id === cat.id);
+    if (types.length === 0) return;
+    const grp = document.createElement('optgroup');
+    grp.label = cat.name;
+    types.forEach(t => {
+      const o = el('option');
+      o.value = t.id;
+      o.textContent = t.name;
+      grp.appendChild(o);
+    });
+    sel.appendChild(grp);
+  });
+  if (selectedId) sel.value = String(selectedId);
+}
+
+function renderRawTable(tbody, isWizard) {
+  tbody.innerHTML = '';
+  const raws = wizardState.rawShifts;
+  if (raws.length === 0) {
+    const tr = el('tr');
+    tr.innerHTML = `<td colspan="3"><div class="empty"><div class="empty-ico">🔎</div>Ingen råværdier fundet</div></td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+  raws.forEach(r => {
+    const ignored = wizardState.ignoredRaws.has(r.name);
+    const isMapped = r.shift_type_id !== null;
+    const isNan = r.name === 'NAN';
+    const tr = el('tr', (isMapped || ignored || isNan) ? 'is-mapped' : '');
+    tr.dataset.raw = r.name;
+
+    let actionCell;
+    if (isNan) {
+      actionCell = `<span class="muted">Tom celle</span>`;
+    } else if (isMapped || ignored) {
+      const st = wizardState.shiftTypes.find(t => t.id === r.shift_type_id);
+      const cat = st ? wizardState.categories.find(c => c.id === st.shift_category_id) : null;
+      if (ignored) {
+        actionCell = `<span class="muted">Ignoreret</span>`;
+      } else {
+        actionCell = `<span>${st?.name || '?'}</span> <span class="pill pill-amber">${cat?.name || '?'}</span>`;
+      }
+    } else {
+      // Unmapped — render select
+      actionCell = `<select class="raw-map-sel" data-raw="${r.name}" style="max-width:280px"></select>`;
+    }
+
+    const statusCell = isNan ? `<span class="status-ignored">ignoreret</span>` :
+      ignored ? `<span class="status-ignored">ignoreret</span>` :
+      isMapped ? `<span class="status-ok">✓ mappet</span>` :
+      `<span class="status-pending">afventer</span>`;
+
+    tr.innerHTML = `
+      <td><span class="raw-chip">${r.name}</span></td>
+      <td>${actionCell}</td>
+      <td class="raw-status-cell">${statusCell}</td>`;
+    tbody.appendChild(tr);
+
+    // Wire up select after appending
+    if (!isNan && !isMapped && !ignored) {
+      const sel = tr.querySelector('.raw-map-sel');
+      buildTypeOptions(sel, null);
+      sel.addEventListener('change', () => handleRawMap(r.name, sel.value, tr, isWizard));
+    }
+  });
+}
+
+async function handleRawMap(rawName, value, tr, isWizard) {
+  if (!value) return;
+  if (value === '__ignore__') {
+    wizardState.ignoredRaws.add(rawName);
+    tr.className = 'is-mapped';
+    const cells = tr.querySelectorAll('td');
+    cells[1].innerHTML = `<span class="muted">Ignoreret</span>`;
+    cells[2].innerHTML = `<span class="status-ignored">ignoreret</span>`;
+    if (isWizard) updateStep3Status();
+    else updateRsStatus();
+    return;
+  }
+  try {
+    await api('/raw-shifts/map', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ raw_name: rawName, shift_type_id: parseInt(value) }),
+    });
+    // Update local state
+    const raw = wizardState.rawShifts.find(r => r.name === rawName);
+    if (raw) raw.shift_type_id = parseInt(value);
+    toast(`"${rawName}" mappet`, 'success');
+    // Re-render row
+    const st = wizardState.shiftTypes.find(t => t.id === parseInt(value));
+    const cat = st ? wizardState.categories.find(c => c.id === st.shift_category_id) : null;
+    tr.className = 'is-mapped';
+    const cells = tr.querySelectorAll('td');
+    cells[1].innerHTML = `<span>${st?.name || '?'}</span> <span class="pill pill-amber">${cat?.name || '?'}</span>`;
+    cells[2].innerHTML = `<span class="status-ok">✓ mappet</span>`;
+    if (isWizard) updateStep3Status();
+    else updateRsStatus();
+    refreshRawBadge();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function countUnmapped() {
+  return wizardState.rawShifts.filter(
+    r => r.name !== 'NAN' && r.shift_type_id === null && !wizardState.ignoredRaws.has(r.name)
+  ).length;
+}
+
+function updateStep3Status() {
+  const n = countUnmapped();
+  const status = $('wiz3-map-status');
+  const hs = $('wiz3-hardstop');
+  const btn = $('wiz3-done-btn');
+  const hint = $('wiz3-done-hint');
+
+  if (n > 0) {
+    hs.style.display = '';
+    $('wiz3-hs-title').textContent = `Hard stop — ${n} råværdi${n > 1 ? 'er' : ''} afventer mapping`;
+    status.textContent = `${n} mangler`;
+    status.className = 'c-red';
+    btn.disabled = true;
+    hint.style.display = '';
+  } else {
+    hs.style.display = 'none';
+    status.textContent = '✓ Alle mappet';
+    status.className = 'c-green';
+    btn.disabled = false;
+    hint.style.display = 'none';
+  }
+}
+
+/* Add category */
+$('add-cat-btn').addEventListener('click', async () => {
+  const input = $('new-cat-input');
+  const name = input.value.trim();
+  if (!name) return;
+  const btn = $('add-cat-btn');
+  spinBtn(btn);
+  try {
+    await api('/shift-categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    input.value = '';
+    await loadStep3Data();
+    toast('Kategori oprettet', 'success');
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    restoreBtn(btn, '+ Tilføj');
+  }
+});
+$('new-cat-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('add-cat-btn').click(); });
+
+/* Add shift type */
+$('add-type-btn').addEventListener('click', async () => {
+  const name  = $('new-type-name').value.trim();
+  const start = $('new-type-start').value || null;
+  const end   = $('new-type-end').value || null;
+  const catId = $('new-type-cat').value;
+  if (!name || !catId) { toast('Navn og kategori er påkrævet', 'error'); return; }
+  const btn = $('add-type-btn');
+  spinBtn(btn);
+  try {
+    await api('/shift-types', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, start_time: start, end_time: end, shift_category_id: parseInt(catId) }),
+    });
+    $('new-type-name').value = '';
+    $('new-type-start').value = '';
+    $('new-type-end').value = '';
+    $('new-type-cat').value = '';
+    await loadStep3Data();
+    toast('Vagttype oprettet', 'success');
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    restoreBtn(btn, '+ Tilføj');
+  }
+});
+
+/* Done button */
+$('wiz3-done-btn').addEventListener('click', () => {
+  const d = wizardState.confirmData;
+  $('wiz4-desc').textContent =
+    `${d?.shift_entries_added ?? '?'} vagter gemt · ${d?.employees_added?.length ?? 0} nye medarbejdere oprettet`;
+  setWizardStep(4);
+  refreshRawBadge();
+});
+
+/* Reset wizard */
+$('wiz4-reset-btn').addEventListener('click', () => {
+  wizardState = {
+    step: 1, sessionToken: null, parseData: null,
+    columnDecisions: {}, confirmData: null,
+    categories: [], shiftTypes: [], rawShifts: [], ignoredRaws: new Set(),
+  };
+  $('drop-inner').innerHTML = `<div class="drop-icon">📋</div><div class="drop-label">Træk fil hertil eller klik for at vælge</div><div class="drop-hint">.xlsx / .xls</div>`;
+  $('file-input').value = '';
+  $('file-input').disabled = false;
+  setWizardStep(1);
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PAGE: Raw Shifts overview
+════════════════════════════════════════════════════════════════════════════ */
+async function loadRawShiftsPage() {
+  $('rs-loading').style.display = '';
+  $('rs-table').style.display = 'none';
+  try {
+    const [raws, types, cats] = await Promise.all([
+      api('/raw-shifts'), api('/shift-types'), api('/shift-categories'),
+    ]);
+    wizardState.rawShifts = raws;
+    wizardState.shiftTypes = types;
+    wizardState.categories = cats;
+
+    // Render category list
+    rsRenderCatList();
+    rsRenderTypeList();
+    rsRenderTypeCatSelect();
+
+    $('rs-loading').style.display = 'none';
+    $('rs-table').style.display = '';
+    renderRawTable($('rs-tbody'), false);
+    updateRsStatus();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function rsRenderCatList() {
+  const list = $('rs-cat-list');
+  const cats = wizardState.categories;
+  if (cats.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-ico">📁</div>Ingen kategorier endnu</div>';
+    return;
+  }
+  list.innerHTML = '';
+  cats.forEach(function(c) {
+    const item = el('div', 'list-item');
+    const name = el('span', 'li-name', c.name);
+    const pill = el('span', 'pill', 'ID ' + c.id);
+    const btn  = el('button', 'btn-del', '🗑');
+    btn.title = 'Slet kategori';
+    btn.addEventListener('click', async function() {
+      if (!confirm('Slet kategorien "' + c.name + '"? Vagttyper i denne kategori mister deres kategori.')) return;
+      btn.textContent = '…'; btn.disabled = true;
+      try {
+        await api('/shift-categories/' + c.id, { method: 'DELETE' });
+        toast('"' + c.name + '" slettet', 'info');
+        await loadRawShiftsPage();
+      } catch (e) { toast(e.message, 'error'); btn.textContent = '🗑'; btn.disabled = false; }
+    });
+    item.appendChild(name);
+    item.appendChild(pill);
+    item.appendChild(btn);
+    list.appendChild(item);
+  });
+}
+
+function rsRenderTypeList() {
+  const list = $('rs-type-list');
+  const types = wizardState.shiftTypes.slice().sort(function(a,b){ return a.display_order - b.display_order; });
+  const cats  = wizardState.categories;
+  if (types.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-ico">📅</div>Ingen vagttyper endnu</div>';
+    return;
+  }
+  list.innerHTML = '';
+
+  var hint = el('div', 'muted', '↕ Træk for at ændre rækkefølge i dagsoversigten');
+  hint.style.cssText = 'font-size:.68rem; margin-bottom:8px';
+  list.appendChild(hint);
+
+  var dragSrc = null;
+
+  types.forEach(function(st) {
+    const cat  = cats.find(function(c) { return c.id === st.shift_category_id; });
+    const item = el('div', 'list-item');
+    item.draggable = true;
+    item.dataset.id = st.id;
+    item.style.cursor = 'grab';
+
+    var handle = el('span', '', '⠿');
+    handle.style.cssText = 'color:var(--muted); margin-right:6px; cursor:grab; user-select:none';
+    item.appendChild(handle);
+
+    const name = el('span', 'li-name', st.name);
+    item.appendChild(name);
+    if (st.start_time) {
+      item.appendChild(el('span', 'li-meta', st.start_time.substring(0,5) + '–' + st.end_time.substring(0,5)));
+    }
+    item.appendChild(el('span', 'pill pill-amber', cat ? cat.name : '?'));
+
+    const btn = el('button', 'btn-del', '🗑');
+    btn.title = 'Slet vagttype';
+    btn.addEventListener('click', async function() {
+      if (!confirm('Slet vagttypen "' + st.name + '"?')) return;
+      btn.textContent = '…'; btn.disabled = true;
+      try {
+        await api('/shift-types/' + st.id, { method: 'DELETE' });
+        toast('"' + st.name + '" slettet', 'info');
+        await loadRawShiftsPage();
+      } catch (e) { toast(e.message, 'error'); btn.textContent = '🗑'; btn.disabled = false; }
+    });
+    item.appendChild(btn);
+
+    // Drag events
+    item.addEventListener('dragstart', function(e) {
+      dragSrc = item;
+      e.dataTransfer.effectAllowed = 'move';
+      item.style.opacity = '0.4';
+    });
+    item.addEventListener('dragend', function() {
+      item.style.opacity = '';
+      list.querySelectorAll('.list-item').forEach(function(n){ n.classList.remove('drag-over'); });
+    });
+    item.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (item !== dragSrc) item.classList.add('drag-over');
+    });
+    item.addEventListener('dragleave', function() { item.classList.remove('drag-over'); });
+    item.addEventListener('drop', async function(e) {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      if (!dragSrc || dragSrc === item) return;
+
+      // Re-order items in DOM
+      const allItems = Array.from(list.querySelectorAll('.list-item[data-id]'));
+      const fromIdx = allItems.indexOf(dragSrc);
+      const toIdx   = allItems.indexOf(item);
+      if (fromIdx < toIdx) item.after(dragSrc);
+      else item.before(dragSrc);
+
+      // Persist new order via API
+      const ordered = Array.from(list.querySelectorAll('.list-item[data-id]'));
+      await saveTypeOrder(ordered);
+    });
+
+    list.appendChild(item);
+  });
+}
+
+async function saveTypeOrder(orderedItems) {
+  try {
+    await Promise.all(orderedItems.map(function(el, idx) {
+      return api('/shift-types/' + el.dataset.id + '/order?display_order=' + idx, { method: 'PATCH' });
+    }));
+    // Update local state so wizard also gets correct order
+    const ordered = Array.from(orderedItems).map(function(el) { return parseInt(el.dataset.id); });
+    wizardState.shiftTypes = wizardState.shiftTypes.map(function(st) {
+      const pos = ordered.indexOf(st.id);
+      return Object.assign({}, st, { display_order: pos >= 0 ? pos : st.display_order });
+    });
+    // Also rebuild the raw table selects (optgroup order)
+    renderRawTable($('rs-tbody'), false);
+    updateRsStatus();
+    toast('Rækkefølge gemt', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function rsRenderTypeCatSelect() {
+  const sel = $('rs-new-type-cat');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Vælg…</option>';
+  wizardState.categories.forEach(c => {
+    const o = el('option'); o.value = c.id; o.textContent = c.name;
+    sel.appendChild(o);
+  });
+  if (cur) sel.value = cur;
+}
+
+// Add category
+$('rs-add-cat-btn').addEventListener('click', async () => {
+  const input = $('rs-new-cat-input');
+  const name = input.value.trim();
+  if (!name) return;
+  const btn = $('rs-add-cat-btn');
+  spinBtn(btn);
+  try {
+    await api('/shift-categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    input.value = '';
+    await loadRawShiftsPage();
+    toast('Kategori oprettet', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+  finally { restoreBtn(btn, '+ Tilføj'); }
+});
+$('rs-new-cat-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('rs-add-cat-btn').click(); });
+
+// Add shift type
+$('rs-add-type-btn').addEventListener('click', async () => {
+  const name  = $('rs-new-type-name').value.trim();
+  const start = $('rs-new-type-start').value || null;
+  const end   = $('rs-new-type-end').value || null;
+  const catId = $('rs-new-type-cat').value;
+  if (!name || !catId) { toast('Navn og kategori er påkrævet', 'error'); return; }
+  const btn = $('rs-add-type-btn');
+  spinBtn(btn);
+  try {
+    await api('/shift-types', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, start_time: start, end_time: end, shift_category_id: parseInt(catId) }),
+    });
+    $('rs-new-type-name').value = '';
+    $('rs-new-type-start').value = '';
+    $('rs-new-type-end').value = '';
+    $('rs-new-type-cat').value = '';
+    await loadRawShiftsPage();
+    toast('Vagttype oprettet', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+  finally { restoreBtn(btn, '+ Tilføj'); }
+});
+
+function updateRsStatus() {
+  const n = countUnmapped();
+  const hs = $('rs-hardstop');
+  const status = $('rs-map-status');
+  if (n > 0) {
+    hs.style.display = '';
+    $('rs-hs-title').textContent = `${n} umappede råværdi${n > 1 ? 'er' : ''}`;
+    if (status) { status.textContent = `${n} mangler`; status.className = 'c-red'; }
+  } else {
+    hs.style.display = 'none';
+    if (status) { status.textContent = '✓ Alle mappet'; status.className = 'c-green'; }
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PAGE: Employees
+════════════════════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════════════════════
+   PAGE: Employees — multiple subscriptions per employee
+════════════════════════════════════════════════════════════════════════════ */
+async function loadEmployeesPage() {
+  $('emp-loading').style.display = '';
+  $('emp-list').innerHTML = '';
+  try {
+    const [emps, cats] = await Promise.all([api('/employees'), api('/shift-categories')]);
+    $('emp-loading').style.display = 'none';
+
+    if (emps.length === 0) {
+      $('emp-list').innerHTML = `<div class="card"><div class="empty"><div class="empty-ico">👤</div>Ingen medarbejdere endnu — upload en vagtplan først</div></div>`;
+      return;
+    }
+
+    // Load all subscriptions per employee concurrently
+    const subsMap = {};
+    await Promise.all(emps.map(async e => {
+      try { subsMap[e.id] = await api(`/employees/${e.id}/subscriptions`); }
+      catch { subsMap[e.id] = []; }
+    }));
+
+    emps.forEach(emp => renderEmployeeCard(emp, subsMap[emp.id] || [], cats));
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function renderEmployeeCard(emp, subs, cats) {
+  const card = el('div', 'card');
+  card.id = `emp-card-${emp.id}`;
+
+  // Header
+  const header = el('div', 'row-between mb2');
+  const subCount = subs.length;
+  header.innerHTML = `
+    <div class="card-title">${emp.name}</div>
+    ${subCount > 0
+      ? `<span class="pill pill-green">${subCount} kalender${subCount > 1 ? 'e' : ''}</span>`
+      : `<span class="pill pill-red">Ingen kalendere</span>`}`;
+  card.appendChild(header);
+
+  // Existing subscriptions
+  const subsList = el('div');
+  subs.forEach(sub => {
+    subsList.appendChild(buildSubCard(sub, emp, cats));
+  });
+  card.appendChild(subsList);
+
+  // Divider + "add new" toggle
+  const divider = el('div', 'divider');
+  card.appendChild(divider);
+
+  // Toggle button
+  const addBtn = el('button', 'btn btn-ghost btn-sm', '+ Tilføj ny kalender');
+  card.appendChild(addBtn);
+
+  // New subscription form (hidden initially)
+  const formWrap = el('div', 'new-sub-form');
+  formWrap.style.display = 'none';
+  formWrap.appendChild(buildNewSubForm(emp, cats, () => {
+    formWrap.style.display = 'none';
+    addBtn.style.display = '';
+    // Reload entire card
+    reloadEmployeeCard(emp, cats);
+  }));
+  card.appendChild(formWrap);
+
+  addBtn.addEventListener('click', () => {
+    formWrap.style.display = '';
+    addBtn.style.display = 'none';
+  });
+
+  $('emp-list').appendChild(card);
+}
+
+function buildSubCard(sub, emp, cats) {
+  const wrap = el('div', 'sub-card');
+
+  // Header row: label + delete button
+  const hdr = el('div', 'sub-card-header');
+  const lbl = el('span', 'sub-label', sub.label);
+  const delBtn = el('button', 'btn-del', '🗑 Slet');
+  delBtn.addEventListener('click', async () => {
+    if (!confirm(`Slet "${sub.label}"?`)) return;
+    delBtn.textContent = '…';
+    delBtn.disabled = true;
+    try {
+      await api(`/subscriptions/${sub.id}`, { method: 'DELETE' });
+      toast(`"${sub.label}" slettet`, 'info');
+      reloadEmployeeCard(emp, cats);
+    } catch (e) {
+      toast(e.message, 'error');
+      delBtn.textContent = '🗑 Slet';
+      delBtn.disabled = false;
+    }
+  });
+  hdr.appendChild(lbl);
+  hdr.appendChild(delBtn);
+  wrap.appendChild(hdr);
+
+  // ICS URL
+  const webcal = sub.ics_url.replace(/^https?/, 'webcal');
+  const icsBox = el('div', 'ics-box');
+  icsBox.innerHTML = `<span class="ics-url">${sub.ics_url}</span>`;
+  const copyBtn = el('button', 'btn btn-ghost btn-sm', 'Kopier webcal://');
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard?.writeText(webcal);
+    const orig = copyBtn.textContent;
+    copyBtn.textContent = 'Kopieret ✓';
+    setTimeout(() => copyBtn.textContent = orig, 2000);
+    toast('webcal:// kopieret', 'info');
+  });
+  icsBox.appendChild(copyBtn);
+  wrap.appendChild(icsBox);
+
+  // Meta
+  const catNames = sub.category_ids.map(id => {
+    // We don't have cats here directly, but we can show IDs
+    return `#${id}`;
+  });
+  const meta = el('div', 'sub-meta');
+  meta.textContent =
+    (sub.all_day_events ? '📅 Heldagsbegivenheder' : '⏱ Tidssat') +
+    (sub.category_ids.length > 0 ? ` · Kategorier: ${sub.category_ids.join(', ')}` : ' · Alle kategorier');
+  wrap.appendChild(meta);
+
+  return wrap;
+}
+
+function buildNewSubForm(emp, cats, onCreated) {
+  const formState = { label: 'Min kalender', all_day: true, show_roster: true, cats: [] };
+  const wrap = el('div');
+
+  wrap.innerHTML = `<div class="new-sub-form-title">Ny kalender</div>`;
+
+  // Label input
+  const labelField = el('div', 'field');
+  labelField.style.marginBottom = '10px';
+  labelField.innerHTML = `<label>Navn på kalender</label>`;
+  const labelInput = document.createElement('input');
+  labelInput.type = 'text';
+  labelInput.value = formState.label;
+  labelInput.placeholder = 'F.eks. "Dagvagter" eller "Alle vagter"';
+  labelInput.addEventListener('input', () => formState.label = labelInput.value);
+  labelField.appendChild(labelInput);
+  wrap.appendChild(labelField);
+
+  // Day roster toggle
+  const rosterLabel = el('label', 'row');
+  rosterLabel.style.cssText = 'font-size:.76rem; cursor:pointer; gap:6px; margin-bottom:10px';
+  const cbRoster = document.createElement('input');
+  cbRoster.type = 'checkbox'; cbRoster.checked = true;
+  cbRoster.addEventListener('change', function() { formState.show_roster = cbRoster.checked; });
+  rosterLabel.appendChild(cbRoster);
+  rosterLabel.append(' Vis dagsoversigt i beskrivelse (hvem har hvilken vagt)');
+  wrap.appendChild(rosterLabel);
+
+  // All-day checkbox
+  const allDayLabel = el('label', 'row');
+  allDayLabel.style.cssText = 'font-size:.76rem; cursor:pointer; gap:6px; margin-bottom:10px';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox'; cb.checked = true;
+  cb.addEventListener('change', () => formState.all_day = cb.checked);
+  allDayLabel.appendChild(cb);
+  allDayLabel.append(' Heldagsbegivenheder');
+  wrap.appendChild(allDayLabel);
+
+  // Category selector
+  if (cats.length > 0) {
+    wrap.appendChild(el('div', 'muted mb2', 'Kategorier (tom = alle):'));
+    const catGrid = el('div', 'tag-grid');
+    catGrid.style.marginBottom = '12px';
+    cats.forEach(c => {
+      const tag = el('div', 'col-tag');
+      tag.textContent = c.name;
+      tag.style.cursor = 'pointer';
+      tag.addEventListener('click', () => {
+        const idx = formState.cats.indexOf(c.id);
+        if (idx === -1) { formState.cats.push(c.id); tag.classList.add('yes'); tag.textContent = '✓ ' + c.name; }
+        else { formState.cats.splice(idx, 1); tag.classList.remove('yes'); tag.textContent = c.name; }
+      });
+      catGrid.appendChild(tag);
+    });
+    wrap.appendChild(catGrid);
+  }
+
+  // Buttons
+  const btnRow = el('div', 'row');
+  const createBtn = el('button', 'btn btn-primary btn-sm', '+ Opret kalender');
+  const cancelBtn = el('button', 'btn btn-ghost btn-sm', 'Annuller');
+  cancelBtn.addEventListener('click', onCreated); // reuse callback to just close
+  createBtn.addEventListener('click', async () => {
+    if (!formState.label.trim()) { toast('Angiv et navn til kalenderen', 'error'); return; }
+    spinBtn(createBtn, 'Opretter…');
+    try {
+      await api(`/employees/${emp.id}/subscriptions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label: formState.label.trim(),
+          all_day_events: formState.all_day,
+          show_day_roster: formState.show_roster,
+          category_ids: formState.cats,
+        }),
+      });
+      toast('Kalender oprettet', 'success');
+      onCreated();
+    } catch (e) {
+      toast(e.message, 'error');
+      restoreBtn(createBtn, '+ Opret kalender');
+    }
+  });
+  btnRow.appendChild(createBtn);
+  btnRow.appendChild(cancelBtn);
+  wrap.appendChild(btnRow);
+
+  return wrap;
+}
+
+async function reloadEmployeeCard(emp, cats) {
+  try {
+    const subs = await api(`/employees/${emp.id}/subscriptions`);
+    const existing = $(`emp-card-${emp.id}`);
+    if (existing) {
+      const newCard = document.createElement('div');
+      // Temporarily attach to DOM to use renderEmployeeCard logic
+      $('emp-list').insertBefore(newCard, existing);
+      existing.remove();
+      // Re-render into list
+      renderEmployeeCard(emp, subs, cats);
+      newCard.remove();
+    }
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+/* ════════════════════════════════════════════════════════════════════════════
+   PAGE: Config IO
+════════════════════════════════════════════════════════════════════════════ */
+function initConfigIO() {
+  // Export button
+  const exportBtn = $('cfg-export-btn');
+  exportBtn.onclick = () => {
+    window.location.href = '/config/export';
+  };
+
+  // Import drop zone
+  const dropZone = $('cfg-drop-zone');
+  const fileInput = $('cfg-file-input');
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('over'); handleConfigFile(e.dataTransfer.files[0]); });
+  fileInput.addEventListener('change', () => handleConfigFile(fileInput.files[0]));
+}
+
+async function handleConfigFile(file) {
+  if (!file) return;
+  const inner = $('cfg-drop-inner');
+  inner.innerHTML = `<div class="spin" style="margin:0 auto 8px"></div><div class="drop-label" style="font-size:.85rem">Importerer…</div>`;
+
+  try {
+    const text = await file.text();
+    let payload;
+    try { payload = JSON.parse(text); }
+    catch { throw new Error('Filen er ikke gyldig JSON.'); }
+
+    const result = await api('/config/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const resDiv = $('cfg-import-result');
+    resDiv.style.display = '';
+    resDiv.innerHTML = `
+      <div class="success-banner">
+        <div class="sb-title">✓ Import gennemført</div>
+        <div class="sb-desc">
+          ${result.categories_added} kategorier oprettet ·
+          ${result.shift_types_added} vagttyper oprettet ·
+          ${result.raw_shifts_mapped} råværdier mappet
+        </div>
+      </div>
+      ${result.warnings.length > 0 ? `
+        <div class="hard-stop">
+          <div class="hs-icon">⚠️</div>
+          <div>
+            <div class="hs-title">${result.warnings.length} advarsel${result.warnings.length > 1 ? 'er' : ''}</div>
+            <div class="hs-desc">${result.warnings.map(w => `• ${w}`).join('<br>')}</div>
+          </div>
+        </div>` : ''}`;
+
+    toast('Import fuldført', 'success');
+    inner.innerHTML = `<div class="drop-icon" style="font-size:1.8rem; margin-bottom:8px">📂</div><div class="drop-label" style="font-size:.88rem">Træk JSON-fil hertil eller klik for at vælge</div><div class="drop-hint">.json</div>`;
+    $('cfg-file-input').value = '';
+
+    // Reload raw badge in case new mappings appeared
+    refreshRawBadge();
+  } catch (e) {
+    toast(e.message, 'error');
+    inner.innerHTML = `<div class="drop-icon" style="font-size:1.8rem; margin-bottom:8px">📂</div><div class="drop-label" style="font-size:.88rem">Træk JSON-fil hertil eller klik for at vælge</div><div class="drop-hint">.json</div>`;
+    $('cfg-file-input').value = '';
+  }
+}
+// ── Bootstrap ────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  // Session valideres server-side — siden renderes kun hvis vi er logget ind.
+  // Vis brugernavn fra Jinja2-injiceret CURRENT_USER.
+  if (CURRENT_USER) {
+    document.getElementById('topbar-user').textContent = CURRENT_USER.name || CURRENT_USER.email || '';
+    document.getElementById('topbar-right').style.display = '';
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', function() {
+    window.location.href = '/auth/logout';
+  });
+
+  // Wire up navigation
+  document.querySelectorAll('.nav-btn[data-page]').forEach(function(btn) {
+    btn.addEventListener('click', function() { showPage(btn.dataset.page); });
+  });
+
+  // Load initial badge counts and show first page
+  refreshRawBadge();
+  showPage('upload');
+});
+</script>
+
+
+</body>
+</html>

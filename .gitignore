@@ -1,0 +1,18 @@
+# Hemmeligheder — må aldrig i Git
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Database og genererede filer
+*.db
+*.db-shm
+*.db-wal
+static/calendars/*.ics
+
+# Virtuelle miljøer
+.venv/
+venv/
