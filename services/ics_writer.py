@@ -20,7 +20,8 @@ from models import (
 )
 from services.ics_generator import build_ics, ResolvedShift
 
-CALENDAR_DIR = Path(__file__).parent.parent / "static" / "calendars"
+import os
+CALENDAR_DIR = Path(os.getenv("CALENDAR_DIR", str(Path(__file__).parent.parent / "static" / "calendars")))
 
 
 def _build_global_roster(session: Session) -> dict[date, dict[str, list[str]]]:
