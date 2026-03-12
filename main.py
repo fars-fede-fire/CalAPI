@@ -39,11 +39,10 @@ load_dotenv()
 BASE_DIR  = Path(__file__).parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-SECRET_KEY = os.getenv("SECRET_KEY", "")
+SECRET_KEY = os.getenv("SECRET_KEY", "skift-denne-i-produktion-til-noget-tilfaeldigt")
 
 
 # ── Lifespan ───────────────────────────────────────────────────────────────────
-
 
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -70,7 +69,7 @@ app.add_middleware(
 )
 
 # ── Static files — PUBLIC ──────────────────────────────────────────────────────
-CALENDAR_DIR = BASE_DIR / "static" / "calendars"
+CALENDAR_DIR = Path(os.getenv("CALENDAR_DIR", str(BASE_DIR / "static" / "calendars")))
 CALENDAR_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/calendar", StaticFiles(directory=str(CALENDAR_DIR)), name="calendars")
 
