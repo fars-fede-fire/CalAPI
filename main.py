@@ -18,7 +18,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
+from sqlmodel import SQLModel
+from database import engine
 import models  # noqa: F401
 
 from auth import require_session
@@ -43,12 +46,22 @@ SECRET_KEY = os.getenv("SECRET_KEY", "skift-denne-i-produktion-til-noget-tilfael
 
 
 # ── Lifespan ───────────────────────────────────────────────────────────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    SQLModel.metadata.create_all(engine)
+    yield
+
 
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="Shift Calendar API",
     version="1.0.0",
+    lifespan=lifespan,
 )
+
+# Stol på X-Forwarded-Proto/Host fra Dokploys reverse proxy
+# så request.base_url afspejler det offentlige https-domæne
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 # Session middleware — skal registreres FØR andre middleware
 app.add_middleware(
